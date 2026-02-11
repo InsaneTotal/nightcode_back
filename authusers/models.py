@@ -29,6 +29,7 @@ class Status(models.Model):
 class User(AbstractUser):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
+    telephone_number = models.CharField(max_length=20, blank=True)
     document_number = models.CharField(max_length=255, unique=True)
     id_type_document = models.ForeignKey(
         TypeDocument, on_delete=models.CASCADE)
