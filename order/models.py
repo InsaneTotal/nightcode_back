@@ -87,7 +87,8 @@ class Order(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
-        return f"Orden {self.pk} - {self.id_users} - {self.total}"
+         return f"Orden {self.pk} - Usuario {self.id_users_id} - {self.total}"
+
 
     class Meta:
         verbose_name = "Orden"

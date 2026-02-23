@@ -51,13 +51,16 @@ class PaymentMethodViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
 	queryset = Order.objects.all().select_related('id_users', 'id_mesa', 'id_payment', 'id_order_status').prefetch_related('details')
 	serializer_class = OrderSerializer
-	permission_classes = [permissions.IsAuthenticated]
+	# permission_classes = [permissions.IsAuthenticated]
 
 	def perform_create(self, serializer):
-		serializer.save(id_users=self.request.user)
+		if self.request.user.is_authenticated:
+			serializer.save(id_users=self.request.user)
+		else:
+			serializer.save()
 
 
 class OrderDetailViewSet(viewsets.ModelViewSet):
 	queryset = OrderDetail.objects.all().select_related('id_drink', 'id_order')
 	serializer_class = OrderDetailSerializer
-	permission_classes = [permissions.IsAuthenticated]
+	# permission_classes = [permissions.IsAuthenticated]

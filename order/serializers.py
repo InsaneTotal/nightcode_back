@@ -38,6 +38,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     id_drink_id = serializers.PrimaryKeyRelatedField(
         source='id_drink', queryset=typeDrinkTables.objects.all(), write_only=True
     )
+    id_order = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
 
     class Meta:
         model = OrderDetail
@@ -56,9 +57,6 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         details_data = validated_data.pop('details', [])
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['id_users'] = request.user
         order = Order.objects.create(**validated_data)
         total = 0
         for item in details_data:
