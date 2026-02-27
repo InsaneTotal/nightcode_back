@@ -2,8 +2,8 @@ from rest_framework import serializers
 from .models import User, TypeDocument, Roles, Status
 
 
-
 class UserSerializer(serializers.ModelSerializer):
+    role_name = serializers.CharField(source='id_role.name', read_only=True)
 
     class Meta:
         model = User
@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
         ] + [
             field.name for field in User._meta.many_to_many
             if field.name not in ('groups', 'user_permissions')
-        ]
+        ] + ['role_name']
         extra_kwargs = {
             'password': {'write_only': True}
         }

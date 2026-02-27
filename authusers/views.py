@@ -48,15 +48,15 @@ class LoginView(APIView):
         if user is not None:
             # if user.id_role == 1:
             refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
+            access = str(refresh.access_token)
             response = Response({
                 'refresh': str(refresh),
-                'access': access_token,
+                'access': access,
                 'id_role': user.id_role.id
             })
             response.set_cookie(
                 key="access",
-                value=access_token,
+                value=access,
                 httponly=True,
                 secure=True,
                 samesite="Lax"
