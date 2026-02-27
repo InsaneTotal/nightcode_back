@@ -35,7 +35,7 @@ class User(AbstractUser):
         TypeDocument, on_delete=models.CASCADE)
     email = models.EmailField(max_length=255, unique=True)
     id_role = models.ForeignKey(Roles, on_delete=models.CASCADE)
-    id_status = models.ForeignKey(Status, on_delete=models.CASCADE)
+    id_status = models.ForeignKey(Status, default=1, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
