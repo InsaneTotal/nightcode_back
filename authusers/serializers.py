@@ -2,16 +2,26 @@ from rest_framework import serializers
 from .models import User, TypeDocument, Roles, Status
 
 
+
 class UserSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
-        fields = '__all__'
+        # Excluir 'groups' y 'user_permissions' de los campos
+        fields = [
+            field.name for field in User._meta.fields
+            if field.name not in ('groups', 'user_permissions')
+        ] + [
+            field.name for field in User._meta.many_to_many
+            if field.name not in ('groups', 'user_permissions')
+        ]
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        validated_data['is_active'] = True
         user = User(**validated_data)
         # Encripta la contraseña usando el método set_password
         user.set_password(password)
