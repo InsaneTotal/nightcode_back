@@ -7,6 +7,13 @@ from .models import (
     Order,
     OrderDetail,
 )
+from authinventory.models import Drink
+
+
+class DrinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Drink
+        fields = ['id', 'name', 'price', 'url_img', 'description']
 
 
 class TypeStatusTablesSerializer(serializers.ModelSerializer):
@@ -33,17 +40,21 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+#  usar drink serializer para mostrar el detalle de la orden, y no solo el id del drink
 class OrderDetailSerializer(serializers.ModelSerializer):
-    id_drink = TypeDrinkTablesSerializer(read_only=True)
-    id_drink_id = serializers.PrimaryKeyRelatedField(
-        source='id_drink', queryset=typeDrinkTables.objects.all(), write_only=True
+    drink = DrinkSerializer(read_only=True)
+    drink_id = serializers.PrimaryKeyRelatedField(
+        source='drink',
+        queryset=Drink.objects.all(),
+        write_only=True
     )
+
     id_order = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
 
     class Meta:
         model = OrderDetail
-        fields = ['id', 'id_order', 'id_drink', 'id_drink_id', 'amount', 'unit_price']
-        read_only_fields = ['id', 'id_drink']
+        fields = ['id', 'id_order', 'drink', 'drink_id', 'amount', 'unit_price']
+        read_only_fields = ['id', 'drink']
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -52,42 +63,71 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'id_users', 'id_mesa', 'id_payment', 'date_order', 'id_order_status', 'total', 'details']
+        fields = [
+            'id',
+            'id_users',
+            'id_mesa',
+            'id_payment',
+            'date_order',
+            'id_order_status',
+            'total',
+            'details'
+        ]
         read_only_fields = ['id', 'date_order', 'total']
 
     def create(self, validated_data):
         details_data = validated_data.pop('details', [])
         order = Order.objects.create(**validated_data)
+
         total = 0
+
         for item in details_data:
-            drink = item.get('id_drink')
-            if isinstance(drink, typeDrinkTables):
-                id_drink = drink
-            else:
-                id_drink = item.get('id_drink')
+            drink = item.get('drink')
             amount = item.get('amount')
             unit_price = item.get('unit_price')
-            OrderDetail.objects.create(id_order=order, id_drink=id_drink, amount=amount, unit_price=unit_price)
+
+            OrderDetail.objects.create(
+                id_order=order,
+                drink=drink,
+                amount=amount,
+                unit_price=unit_price
+            )
+
             total += (amount or 0) * float(unit_price or 0)
+
         order.total = total
         order.save()
+
         return order
 
     def update(self, instance, validated_data):
         details_data = validated_data.pop('details', None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.save()
-        if details_data is not None:
 
+        instance.save()
+
+        if details_data is not None:
             instance.details.all().delete()
+
             total = 0
+
             for item in details_data:
-                id_drink = item.get('id_drink')
+                drink = item.get('drink')
                 amount = item.get('amount')
                 unit_price = item.get('unit_price')
-                OrderDetail.objects.create(id_order=instance, id_drink=id_drink, amount=amount, unit_price=unit_price)
+
+                OrderDetail.objects.create(
+                    id_order=instance,
+                    drink=drink,
+                    amount=amount,
+                    unit_price=unit_price
+                )
+
                 total += (amount or 0) * float(unit_price or 0)
+
             instance.total = total
             instance.save()
+
         return instance

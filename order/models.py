@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
-
-# Create your models here.
+from authinventory.models import Drink
 
 
 class typeStatusTables(models.Model):
@@ -15,7 +14,6 @@ class typeStatusTables(models.Model):
         verbose_name_plural = "Estados"
 
 
-# estado de ordenes
 class typeOrderStatus(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
@@ -26,7 +24,7 @@ class typeOrderStatus(models.Model):
         verbose_name = "estado nombre"
         verbose_name_plural = "estado nombres"
 
-        
+
 class typeDrinkTables(models.Model):
     name = models.CharField(max_length=255, unique=True)
     status = models.ForeignKey(
@@ -53,7 +51,6 @@ class PaymentMethod(models.Model):
     class Meta:
         verbose_name = "Método de pago"
         verbose_name_plural = "Métodos de pago"
-
 
 
 class Order(models.Model):
@@ -87,8 +84,7 @@ class Order(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
-         return f"Orden {self.pk} - Usuario {self.id_users_id} - {self.total}"
-
+        return f"Orden {self.pk} - Usuario {self.id_users_id} - {self.total}"
 
     class Meta:
         verbose_name = "Orden"
@@ -102,18 +98,29 @@ class OrderDetail(models.Model):
         related_name="details",
         db_column="id_order"
     )
+
     id_drink = models.ForeignKey(
         typeDrinkTables,
         on_delete=models.PROTECT,
         related_name="order_details",
-        db_column="id_drink"
+        db_column="id_drink",
+        null=True,
+        blank=True
     )
+
+    drink = models.ForeignKey(
+        Drink,
+        on_delete=models.PROTECT,
+        related_name="order_details_real",
+        null=True,
+        blank=True
+    )
+
     amount = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"Detalle {self.pk} - Orden {self.id_order_id} - {self.amount} x {self.id_drink}"
-
+        return f"Detalle {self.pk} - Orden {self.id_order_id} - {self.amount}"
     class Meta:
         verbose_name = "Detalle de orden"
         verbose_name_plural = "Detalles de orden"
