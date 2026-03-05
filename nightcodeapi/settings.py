@@ -61,8 +61,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://your-frontend-domain.com",
+    # "https://your-frontend-domain.com",
     "http://localhost:3000",
 ]
 
