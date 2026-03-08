@@ -56,56 +56,12 @@ class LoginView(APIView):
         )
 
         if user is not None:
-            # if user.id_role == 1:
             refresh = RefreshToken.for_user(user)
             access = str(refresh.access_token)
-            response = Response({
-                'id_role': str(user.id_role.id)
+            return Response({
+                'id_role': str(user.id_role.id),
+                'access': access,
+                'refresh': str(refresh)
             })
-            response.set_cookie(
-                key="__Host-access",
-                value=access,
-                httponly=True,
-                secure=False,
-                samesite="Lax",
-                path="/",
-                max_age=15 * 60,
-            )
-            response.set_cookie(
-                key="__Host-refresh",
-                value=str(refresh),
-                httponly=True,
-                secure=False,
-                samesite="Strict",
-                path="/api/auth/refresh/",
-                max_age=7 * 24 * 60 * 60,
-            )
-            return response
         else:
-            return Response({'error': f'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-class RefreshTokenView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        refresh_token = request.COOKIES.get("__Host-refresh")
-        if not refresh_token:
-            return Response({"error": "No refresh token provided"}, status=status.HTTP_401_UNAUTHORIZED)
-        try:
-            refresh = RefreshToken(refresh_token)
-            access_token = str(refresh.access_token)
-            response = Response({"access": access_token})
-            response.set_cookie(
-                key="__Host-access",
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite="Lax",
-                path="/",
-                max_age=15 * 60,
-                expires=timezone.now() + timedelta(minutes=15),
-            )
-            return response
-        except TokenError:
-            return Response({"error": "Invalid or expired refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
