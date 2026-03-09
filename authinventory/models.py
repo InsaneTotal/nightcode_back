@@ -18,7 +18,7 @@ class Drink(models.Model):
     )
     name = models.CharField(max_length=150)
     url_img = models.CharField(max_length=500, blank=True, null=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=0)
     description = models.TextField(blank=True)
     amount = models.PositiveIntegerField()
 
