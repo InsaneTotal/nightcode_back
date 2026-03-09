@@ -24,6 +24,13 @@ class UserViewSet(viewsets.ModelViewSet):
         user.save()
         return Response({'status': 'Usuario desactivado'})
 
+    @action(detail=True, methods=['post'], url_path='activate')
+    def activate_user(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = True
+        user.save()
+        return Response({'status': 'Usuario activado'})
+
 
 class TypeDocumentViewSet(viewsets.ModelViewSet):
     queryset = TypeDocument.objects.all()
