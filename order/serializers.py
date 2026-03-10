@@ -43,7 +43,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
 #  usar drink serializer para mostrar el detalle de la orden, y no solo el id del drink
 class OrderDetailSerializer(serializers.ModelSerializer):
     drink = DrinkSerializer(read_only=True)
-    drink_id = serializers.PrimaryKeyRelatedField(
+    id_drink = serializers.PrimaryKeyRelatedField(
         source='drink',
         queryset=Drink.objects.all(),
         write_only=True
@@ -53,7 +53,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderDetail
-        fields = ['id', 'id_order', 'drink', 'drink_id', 'amount', 'unit_price']
+        fields = ['id', 'id_order', 'drink',
+                  'drink_id', 'amount', 'unit_price']
         read_only_fields = ['id', 'drink']
 
 

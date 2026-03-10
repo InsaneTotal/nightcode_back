@@ -1,3 +1,5 @@
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions
 from .models import (
     typeStatusTables,
@@ -33,7 +35,7 @@ class TypeStatusTablesViewSet(viewsets.ModelViewSet):
 class TypeOrderStatusViewSet(viewsets.ModelViewSet):
     queryset = typeOrderStatus.objects.all()
     serializer_class = TypeOrderStatusSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    # permission_classes = [IsAdminOrReadOnly]
 
 
 class TypeDrinkTablesViewSet(viewsets.ModelViewSet):
@@ -46,23 +48,22 @@ class TypeDrinkTablesViewSet(viewsets.ModelViewSet):
 class PaymentMethodViewSet(viewsets.ModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    # permission_classes = [IsAdminOrReadOnly]
 
 
-from django.contrib.auth import get_user_model
-
-
-from rest_framework.permissions import AllowAny
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().select_related(
         'id_users', 'id_mesa', 'id_payment', 'id_order_status'
     ).prefetch_related('details')
     serializer_class = OrderSerializer
-    permission_classes = [AllowAny]   # Cambiado a AllowAny para permitir acceso sin autenticación
+    # Cambiado a AllowAny para permitir acceso sin autenticación
+    permission_classes = [AllowAny]
+
     def perform_create(self, serializer):
         User = get_user_model()
         user = User.objects.first()
         serializer.save(id_users=user)
+
 
 class OrderDetailViewSet(viewsets.ModelViewSet):
     queryset = OrderDetail.objects.all().select_related('id_drink', 'id_order')
