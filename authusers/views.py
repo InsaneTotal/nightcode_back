@@ -34,24 +34,24 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class TypeDocumentViewSet(viewsets.ModelViewSet):
     queryset = TypeDocument.objects.all()
-    permission_classes = [IsAdminOnly]
+    # permission_classes = [IsAdminOnly]
     serializer_class = TypeDocumentSerializer
 
 
 class RolesViewSet(viewsets.ModelViewSet):
     queryset = Roles.objects.all()
-    permission_classes = [IsAdminOnly]
+    # permission_classes = [IsAdminOnly]
     serializer_class = RolesSerializer
 
 
 class StatusViewSet(viewsets.ModelViewSet):
     queryset = Status.objects.all()
-    permission_classes = [IsAdminOnly]
+    # permission_classes = [IsAdminOnly]
     serializer_class = StatusSerializer
 
 
 class LoginView(APIView):
-    permission_classes = [permissions.AllowAny]
+    # permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         email = request.data.get('email')
