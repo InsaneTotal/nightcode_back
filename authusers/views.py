@@ -1,7 +1,10 @@
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken, TokenError
 from django.contrib.auth import authenticate
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import action
 from rest_framework import viewsets, permissions, status
 from .models import User, TypeDocument, Roles, Status
 from .serializers import UserSerializer, TypeDocumentSerializer, RolesSerializer, StatusSerializer
@@ -13,6 +16,20 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     permission_classes = [permissions.AllowAny]
     serializer_class = UserSerializer
+
+    @action(detail=True, methods=['post'], url_path='deactivate')
+    def deactivate_user(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = False
+        user.save()
+        return Response({'status': 'Usuario desactivado'})
+
+    @action(detail=True, methods=['post'], url_path='activate')
+    def activate_user(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = True
+        user.save()
+        return Response({'status': 'Usuario activado'})
 
 
 class TypeDocumentViewSet(viewsets.ModelViewSet):
@@ -46,28 +63,12 @@ class LoginView(APIView):
         )
 
         if user is not None:
-            # if user.id_role == 1:
             refresh = RefreshToken.for_user(user)
             access = str(refresh.access_token)
-            response = Response({
-                'refresh': str(refresh),
+            return Response({
+                'id_role': str(user.id_role.id),
                 'access': access,
-                'id_role': user.id_role.id
+                'refresh': str(refresh)
             })
-            response.set_cookie(
-                key="access",
-                value=access,
-                httponly=True,
-                secure=True,
-                samesite="Lax"
-            )
-            response.set_cookie(
-                key="refresh",
-                value=str(refresh),
-                httponly=True,
-                secure=True,
-                samesite="Lax"
-            )
-            return response
         else:
-            return Response({'error': f'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
