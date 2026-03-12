@@ -81,7 +81,7 @@ class Order(models.Model):
         related_name="orders",
         db_column="id_order_status"
     )
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=0, default=0)
 
     def __str__(self):
         return f"Orden {self.pk} - Usuario {self.id_users_id} - {self.total}"
