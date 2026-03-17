@@ -40,6 +40,26 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 
+class CurrentUserSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'role']
+
+    def get_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+
+    def get_role(self, obj):
+        if not obj.id_role:
+            return None
+        return {
+            'id': obj.id_role.id,
+            'name': obj.id_role.name,
+        }
+
+
 class TypeDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = TypeDocument
