@@ -5,6 +5,10 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from authusers.permissions import IsAdminOrIsWaitressOrIsBartender
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
+
 from .models import (
     typeStatusTables,
     typeOrderStatus,
@@ -94,6 +98,38 @@ class OrderViewSet(viewsets.ModelViewSet):
             many=True,
         )
         return Response(serializer.data)
+
+
+    @action(detail=True, methods=["post"]) 
+    def pay(self, request, pk=None):
+
+        order = self.get_object()
+        payment_method = request.data.get("id_payment")
+        details = order.details.all()
+
+        with transaction.atomic():
+
+            for item in details:
+                drink = item.drink
+
+            if drink.amount < item.amount:
+                return Response({
+                    "error": f"No hay suficiente stock de {drink.name}"
+                })
+
+            drink.amount -= item.amount
+            drink.save()
+
+        # guardar método de pago
+        if payment_method:
+            order.id_payment_id = payment_method
+
+        # cambiar estado a pagada
+        order.id_order_status_id = 4
+        order.save()
+
+        return Response({"message": "Pago realizado y stock actualizado"})
+
 
 
 class OrderDetailViewSet(viewsets.ModelViewSet):
