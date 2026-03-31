@@ -1,6 +1,11 @@
 from django.db import models
 from django.conf import settings
+import secrets
 from authinventory.models import Drink
+
+
+def generate_qr_token(length: int = 32) -> str:
+    return secrets.token_urlsafe(length)
 
 
 class typeStatusTables(models.Model):
@@ -27,6 +32,7 @@ class typeOrderStatus(models.Model):
 
 class typeDrinkTables(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    qr_token = models.CharField(max_length=128, unique=True, null=True, blank=True)
     status = models.ForeignKey(
         typeStatusTables,
         on_delete=models.PROTECT,
@@ -36,6 +42,26 @@ class typeDrinkTables(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.qr_token:
+            token = generate_qr_token()
+            while typeDrinkTables.objects.filter(qr_token=token).exists():
+                token = generate_qr_token()
+            self.qr_token = token
+        super().save(*args, **kwargs)
+
+    def ensure_qr_token(self) -> str:
+        if self.qr_token:
+            return self.qr_token
+
+        token = generate_qr_token()
+        while typeDrinkTables.objects.filter(qr_token=token).exists():
+            token = generate_qr_token()
+
+        self.qr_token = token
+        self.save(update_fields=["qr_token"])
+        return token
 
     class Meta:
         verbose_name = "Tipo de bebida"

@@ -42,7 +42,6 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-#  usar drink serializer para mostrar el detalle de la orden, y no solo el id del drink
 class OrderDetailSerializer(serializers.ModelSerializer):
     drink = DrinkSerializer(read_only=True)
     drink_id = serializers.PrimaryKeyRelatedField(
@@ -141,3 +140,7 @@ class TopDrinkTodaySerializer(serializers.Serializer):
     drink_id = serializers.IntegerField()
     drink_name = serializers.CharField()
     total_units_sold = serializers.IntegerField()
+
+
+class CallWaiterSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True, allow_blank=False)
