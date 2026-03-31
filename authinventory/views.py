@@ -9,8 +9,6 @@ from rest_framework import status
 from .serializers import ImageUploadSerializer
 from rest_framework.permissions import AllowAny
 
-# Endpoint único para subir imágenes
-
 
 class ImageUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -21,12 +19,8 @@ class ImageUploadView(APIView):
             data=request.data, context={'request': request})
         if serializer.is_valid():
             image = serializer.validated_data['image']
-            # El campo image es un archivo, ya guardado por DRF
             return Response({'url': request.build_absolute_uri(image.url)}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# Create your views here.
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
