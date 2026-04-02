@@ -36,7 +36,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class DrinkViewSet(viewsets.ModelViewSet):
-    queryset = Drink.objects.all()
+    queryset = Drink.objects.all().select_related('category')
     serializer_class = DrinkSerializer
     permission_classes = [IsAdminOrIsWaitressOrIsBartender]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
