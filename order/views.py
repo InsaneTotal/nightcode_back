@@ -34,6 +34,8 @@ from .serializers import (
     OrderDetailSerializer,
     TopDrinkTodaySerializer,
 )
+from .realtime import broadcast_order_event
+
 
 class TypeStatusTablesViewSet(viewsets.ModelViewSet):
     queryset = typeStatusTables.objects.all()
@@ -57,7 +59,8 @@ class TypeDrinkTablesViewSet(viewsets.ModelViewSet):
         return tables
 
     def list(self, request, *args, **kwargs):
-        tables = self._ensure_tokens_for_queryset(self.filter_queryset(self.get_queryset()))
+        tables = self._ensure_tokens_for_queryset(
+            self.filter_queryset(self.get_queryset()))
         serializer = self.get_serializer(tables, many=True)
         return Response(serializer.data)
 
@@ -68,6 +71,43 @@ class TypeDrinkTablesViewSet(viewsets.ModelViewSet):
             table.refresh_from_db(fields=['qr_token'])
         serializer = self.get_serializer(table)
         return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        table = serializer.save()
+        broadcast_order_event(
+            'table_created',
+            {
+                'table_id': table.id,
+                'name': table.name,
+                'status_id': table.status_id,
+            },
+            table_id=table.id,
+        )
+
+    def perform_update(self, serializer):
+        table = serializer.save()
+        broadcast_order_event(
+            'table_updated',
+            {
+                'table_id': table.id,
+                'name': table.name,
+                'status_id': table.status_id,
+            },
+            table_id=table.id,
+        )
+
+    def perform_destroy(self, instance):
+        table_id = instance.id
+        table_name = instance.name
+        instance.delete()
+        broadcast_order_event(
+            'table_deleted',
+            {
+                'table_id': table_id,
+                'name': table_name,
+            },
+            table_id=table_id,
+        )
 
     @action(detail=True, methods=['post'], url_path='call-waiter', permission_classes=[permissions.AllowAny])
     def call_waiter(self, request, pk=None):
@@ -91,17 +131,33 @@ class TypeDrinkTablesViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        configured_waiter_status_name = str(
+            getattr(settings, 'CALL_WAITER_STATUS_NAME', 'Llamando mesero')
+        ).strip()
+
         pending_status = typeStatusTables.objects.filter(
-            Q(name__iexact='Pendiente') | Q(name__icontains='llam')
+            Q(name__iexact=configured_waiter_status_name)
+            | Q(name__iexact='Pendiente')
+            | Q(name__icontains='llam')
         ).first()
+
         if pending_status is None:
-            return Response(
-                {'detail': 'No hay estado configurado para llamado de mesero.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            pending_status, _ = typeStatusTables.objects.get_or_create(
+                name=configured_waiter_status_name or 'Llamando mesero'
             )
 
         table.status = pending_status
         table.save(update_fields=['status'])
+
+        broadcast_order_event(
+            'waiter_called',
+            {
+                'table_id': table.id,
+                'status_id': pending_status.id,
+                'status_name': pending_status.name,
+            },
+            table_id=table.id,
+        )
 
         return Response({'detail': 'Mesero llamado con exito'}, status=status.HTTP_200_OK)
 
@@ -121,7 +177,44 @@ class OrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         User = get_user_model()
         user = User.objects.first()
-        serializer.save(id_users=user)
+        order = serializer.save(id_users=user)
+        broadcast_order_event(
+            'order_created',
+            {
+                'order_id': order.id,
+                'table_id': order.id_mesa_id,
+                'order_status_id': order.id_order_status_id,
+                'total': str(order.total),
+            },
+            table_id=order.id_mesa_id,
+        )
+
+    def perform_update(self, serializer):
+        order = serializer.save()
+        broadcast_order_event(
+            'order_updated',
+            {
+                'order_id': order.id,
+                'table_id': order.id_mesa_id,
+                'order_status_id': order.id_order_status_id,
+                'payment_method_id': order.id_payment_id,
+                'total': str(order.total),
+            },
+            table_id=order.id_mesa_id,
+        )
+
+    def perform_destroy(self, instance):
+        order_id = instance.id
+        table_id = instance.id_mesa_id
+        instance.delete()
+        broadcast_order_event(
+            'order_deleted',
+            {
+                'order_id': order_id,
+                'table_id': table_id,
+            },
+            table_id=table_id,
+        )
 
     @action(detail=False, methods=['get'], url_path='top-drinks-today')
     def top_drinks_today(self, request):
@@ -148,7 +241,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             many=True,
         )
         return Response(serializer.data)
-
 
     @action(detail=True, methods=["post"])
     def pay(self, request, pk=None):
@@ -178,7 +270,20 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.id_order_status_id = 4
         order.save()
 
+        broadcast_order_event(
+            'order_paid',
+            {
+                'order_id': order.id,
+                'table_id': order.id_mesa_id,
+                'order_status_id': order.id_order_status_id,
+                'payment_method_id': order.id_payment_id,
+                'total': str(order.total),
+            },
+            table_id=order.id_mesa_id,
+        )
+
         return Response({"message": "Pago realizado y stock actualizado"})
+
 
 class OrderDetailViewSet(viewsets.ModelViewSet):
     queryset = OrderDetail.objects.all().select_related('id_drink', 'id_order')
@@ -186,7 +291,8 @@ class OrderDetailViewSet(viewsets.ModelViewSet):
 
 
 class DownloadTableQRView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrIsWaitressOrIsBartender]
+    permission_classes = [permissions.IsAuthenticated,
+                          IsAdminOrIsWaitressOrIsBartender]
 
     def get(self, request, table_id: int):
         table = get_object_or_404(typeDrinkTables, pk=table_id)
@@ -209,7 +315,8 @@ class DownloadTableQRView(APIView):
             image = qr.make_image(fill_color='black', back_color='white')
             buffer = BytesIO()
             image.save(buffer, format='PNG')
-            response = HttpResponse(buffer.getvalue(), content_type='image/png')
+            response = HttpResponse(
+                buffer.getvalue(), content_type='image/png')
             response['Content-Disposition'] = (
                 f'attachment; filename="mesa-{table.id}-qr.png"'
             )

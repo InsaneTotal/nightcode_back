@@ -105,6 +105,7 @@ ALLOWED_HOSTS = env_list(
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -112,6 +113,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'channels',
     'corsheaders',
     'authusers',
     'authinventory',
@@ -175,6 +177,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'nightcodeapi.wsgi.application'
+ASGI_APPLICATION = 'nightcodeapi.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    }
+}
 
 
 # Database
@@ -242,6 +251,8 @@ FRONTEND_MENU_BASE_URL = os.getenv(
 )
 
 CALL_WAITER_STRICT_TOKEN = env_bool('CALL_WAITER_STRICT_TOKEN', False)
+CALL_WAITER_STATUS_NAME = os.getenv(
+    'CALL_WAITER_STATUS_NAME', 'Llamando mesero')
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
