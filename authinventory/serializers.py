@@ -40,6 +40,19 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = '__all__'
 
+    def validate_name(self, value):
+        value = value.strip()
+        if Category.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("Esta categoría ya existe")
+        return value
+
+    def create(self, validated_data):
+        name = validated_data.get('name')
+        if not name:
+            raise serializers.ValidationError(
+                "El nombre de la categoría es requerido.")
+        return Category.objects.create(**validated_data)
+
 
 class DrinkSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(

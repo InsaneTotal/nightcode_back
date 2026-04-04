@@ -63,12 +63,14 @@ class OrderSerializer(serializers.ModelSerializer):
     total = serializers.IntegerField(read_only=True)
     details = OrderDetailSerializer(many=True, required=False)
     id_users = serializers.PrimaryKeyRelatedField(read_only=True)
+    full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id',
             'id_users',
+            'full_name',
             'id_mesa',
             'id_payment',
             'date_order',
@@ -77,6 +79,11 @@ class OrderSerializer(serializers.ModelSerializer):
             'details'
         ]
         read_only_fields = ['id', 'date_order', 'total']
+
+    def get_full_name(self, obj):
+        if not obj.id_users:
+            return ''
+        return f"{obj.id_users.first_name} {obj.id_users.last_name}".strip()
 
     def create(self, validated_data):
         details_data = validated_data.pop('details', [])
