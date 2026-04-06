@@ -29,15 +29,28 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        password = validated_data.get('password', None)
-        if password:
-            # El método save encripta la contraseña
-            instance.set_password(password)
+        validated_data.pop('password', None)
         for attr, value in validated_data.items():
-            if attr != 'password':
-                setattr(instance, attr, value)
+            setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({
+                'confirm_password': 'Las contraseñas no coinciden.'
+            })
+        return attrs
+
+    def save(self, user):
+        user.set_password(self.validated_data['password'])
+        user.save(update_fields=['password'])
+        return user
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):
