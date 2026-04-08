@@ -41,6 +41,11 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in value.split(',') if item.strip()]
 
 
+def env_str(name: str, default: str = '') -> str:
+    value = os.getenv(name)
+    return value.strip() if value is not None else default
+
+
 def build_database_config() -> dict:
     database_url = os.getenv('DATABASE_URL', '').strip()
     if database_url:
@@ -88,18 +93,24 @@ def build_database_config() -> dict:
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
-    'SECRET_KEY',
-    'django-insecure-twl0+9m%+csh7)m%cffy*3ewz#=kuh(grt7fq9_a@hmxo9%q^%'
-)
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DEBUG', True)
 
+SECRET_KEY = env_str('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-only-key-change-me'
+    else:
+        raise ValueError('SECRET_KEY is required when DEBUG is False')
+
+# SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = env_list(
     'ALLOWED_HOSTS',
     ['127.0.0.1', 'localhost']
 )
+
+render_external_hostname = env_str('RENDER_EXTERNAL_HOSTNAME')
+if render_external_hostname and render_external_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_external_hostname)
 
 
 # Application definition
@@ -124,6 +135,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -154,6 +166,13 @@ CSRF_TRUSTED_ORIGINS = env_list(
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 
+render_external_url = env_str('RENDER_EXTERNAL_URL')
+if render_external_url:
+    if render_external_url not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(render_external_url)
+    if render_external_url not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_external_url)
+
 ROOT_URLCONF = 'nightcodeapi.urls'
 
 REST_FRAMEWORK = {
@@ -180,11 +199,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'nightcodeapi.wsgi.application'
 ASGI_APPLICATION = 'nightcodeapi.asgi.application'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+REDIS_URL = env_str('REDIS_URL')
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        }
     }
-}
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
 
 
 # Database
@@ -234,11 +264,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = env_str('MEDIA_ROOT', str(BASE_DIR / 'media'))
 
 
 SIMPLE_JWT = {
@@ -259,6 +290,12 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False)
+    SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', True)
+    SECURE_HSTS_SECONDS = int(env_str('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+        'SECURE_HSTS_INCLUDE_SUBDOMAINS', True)
+    SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', True)
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
