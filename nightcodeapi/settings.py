@@ -67,6 +67,29 @@ def normalize_origin_list(values: list[str]) -> list[str]:
     return normalized
 
 
+def resolve_media_root() -> str:
+    configured_media_root = env_str('MEDIA_ROOT')
+
+    candidates = []
+    if configured_media_root:
+        candidates.append(Path(configured_media_root))
+
+    if DEBUG:
+        candidates.append(BASE_DIR / 'media')
+
+    # /tmp is writable on Render even when no persistent disk is mounted.
+    candidates.append(Path('/tmp/nightcode-media'))
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return str(candidate)
+        except OSError:
+            continue
+
+    raise ValueError('Could not determine a writable MEDIA_ROOT path.')
+
+
 def build_database_config() -> dict:
     database_url = os.getenv('DATABASE_URL', '').strip()
     if database_url:
@@ -294,7 +317,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = env_str('MEDIA_ROOT', str(BASE_DIR / 'media'))
+MEDIA_ROOT = resolve_media_root()
 
 
 SIMPLE_JWT = {
