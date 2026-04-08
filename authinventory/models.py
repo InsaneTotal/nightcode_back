@@ -1,12 +1,12 @@
 from django.db import models
 
 
-
 # Create your models here.
 
 def drink_image_path(instance, filename):
     # guarda la imagen según la categoría
     return f"categories/{instance.category.name}/{filename}"
+
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -22,7 +22,7 @@ class Drink(models.Model):
         related_name='drinks'
     )
     name = models.CharField(max_length=150)
-    url_img= models.ImageField(
+    url_img = models.ImageField(
         upload_to=drink_image_path,
         blank=True,
         null=True

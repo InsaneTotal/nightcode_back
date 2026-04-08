@@ -18,10 +18,20 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+
+def healthcheck(_request):
+    return JsonResponse({'status': 'ok'}, status=200)
 
 urlpatterns = [
+    path('health/', healthcheck, name='healthcheck'),
     path('admin/', admin.site.urls),
     path('api/authusers/', include('authusers.urls')),
     path('api/authinventory/', include('authinventory.urls')),
     path('api/order/', include('order.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)

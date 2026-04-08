@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from .models import User, TypeDocument, Roles, Status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+from authusers.permissions import IsAdminOnly
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -29,15 +33,49 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        password = validated_data.get('password', None)
-        if password:
-            # El método save encripta la contraseña
-            instance.set_password(password)
+        validated_data.pop('password', None)
         for attr, value in validated_data.items():
-            if attr != 'password':
-                setattr(instance, attr, value)
+            setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({
+                'confirm_password': 'Las contraseñas no coinciden.'
+            })
+        return attrs
+
+    def save(self, **kwargs):
+        user = kwargs.get('user')
+        user.set_password(self.validated_data['password'])
+        user.save(update_fields=['password'])
+        return user
+
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'role']
+
+    def get_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+
+    def get_role(self, obj):
+        if not obj.id_role:
+            return None
+        return {
+            'id': obj.id_role.id,
+            'name': obj.id_role.name,
+        }
 
 
 class TypeDocumentSerializer(serializers.ModelSerializer):

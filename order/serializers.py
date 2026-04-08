@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from .models import (
     typeStatusTables,
@@ -40,7 +42,6 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-#  usar drink serializer para mostrar el detalle de la orden, y no solo el id del drink
 class OrderDetailSerializer(serializers.ModelSerializer):
     drink = DrinkSerializer(read_only=True)
     drink_id = serializers.PrimaryKeyRelatedField(
@@ -53,19 +54,23 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderDetail
-        fields = ['id', 'id_order', 'drink', 'drink_id', 'amount', 'unit_price']
+        fields = ['id', 'id_order', 'drink',
+                  'drink_id', 'amount', 'unit_price']
         read_only_fields = ['id', 'drink']
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    total = serializers.IntegerField(read_only=True)
     details = OrderDetailSerializer(many=True, required=False)
     id_users = serializers.PrimaryKeyRelatedField(read_only=True)
+    full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             'id',
             'id_users',
+            'full_name',
             'id_mesa',
             'id_payment',
             'date_order',
@@ -75,11 +80,16 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'date_order', 'total']
 
+    def get_full_name(self, obj):
+        if not obj.id_users:
+            return ''
+        return f"{obj.id_users.first_name} {obj.id_users.last_name}".strip()
+
     def create(self, validated_data):
         details_data = validated_data.pop('details', [])
         order = Order.objects.create(**validated_data)
 
-        total = 0
+        total = Decimal('0')
 
         for item in details_data:
             drink = item.get('drink')
@@ -93,7 +103,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 unit_price=unit_price
             )
 
-            total += (amount or 0) * float(unit_price or 0)
+            total += Decimal(amount or 0) * Decimal(unit_price or 0)
 
         order.total = total
         order.save()
@@ -111,7 +121,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if details_data is not None:
             instance.details.all().delete()
 
-            total = 0
+            total = Decimal('0')
 
             for item in details_data:
                 drink = item.get('drink')
@@ -125,9 +135,19 @@ class OrderSerializer(serializers.ModelSerializer):
                     unit_price=unit_price
                 )
 
-                total += (amount or 0) * float(unit_price or 0)
+                total += Decimal(amount or 0) * Decimal(unit_price or 0)
 
             instance.total = total
             instance.save()
 
         return instance
+
+
+class TopDrinkTodaySerializer(serializers.Serializer):
+    drink_id = serializers.IntegerField()
+    drink_name = serializers.CharField()
+    total_units_sold = serializers.IntegerField()
+
+
+class CallWaiterSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True, allow_blank=False)
