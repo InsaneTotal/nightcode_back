@@ -21,6 +21,16 @@ class Base64ImageField(serializers.ImageField):
         raise serializers.ValidationError(
             'Formato de imagen no soportado. Debe ser archivo o base64.')
 
+    def to_representation(self, value):
+        if not value:
+            return None
+
+        url = value.url
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
 
 class ImageUploadSerializer(serializers.Serializer):
     image = Base64ImageField(required=True)

@@ -1,11 +1,15 @@
 from django.db import models
+from django.utils.text import slugify
+from pathlib import Path
 
 
 # Create your models here.
 
 def drink_image_path(instance, filename):
-    # guarda la imagen según la categoría
-    return f"categories/{instance.category.name}/{filename}"
+    category_name = slugify(
+        instance.category.name or 'sin-categoria') or 'sin-categoria'
+    file_name = Path(filename).name
+    return f"categories/{category_name}/{file_name}"
 
 
 class Category(models.Model):
