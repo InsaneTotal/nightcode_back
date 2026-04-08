@@ -26,11 +26,16 @@ class ImageUploadView(APIView):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrIsWaitressOrIsBartender]
+    # permission_classes = [IsAdminOrIsWaitressOrIsBartender]
 
 
 class DrinkViewSet(viewsets.ModelViewSet):
     queryset = Drink.objects.all().select_related('category')
     serializer_class = DrinkSerializer
-    # permission_classes = [IsAdminOrIsWaitressOrIsBartender]
+    permission_classes = [IsAdminOrIsWaitressOrIsBartender]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return super().get_permissions()
