@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: nightcode-backend
+    runtime: python
+    plan: starter
+    disk:
+      name: nightcode-media
+      mountPath: /var/data
+      sizeGB: 1
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: daphne -b 0.0.0.0 -p $PORT nightcodeapi.asgi:application
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "False"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://tu-frontend.onrender.com"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://tu-frontend.onrender.com"
+      - key: FRONTEND_MENU_BASE_URL
+        value: "https://tu-frontend.onrender.com/order"
+      - key: MEDIA_ROOT
+        value: "/var/data/media"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nightcode-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: nightcode-redis
+          property: connectionString
+
+  - type: redis
+    name: nightcode-redis
+    plan: starter
+    ipAllowList: []
+
+databases:
+  - name: nightcode-db
+    plan: starter

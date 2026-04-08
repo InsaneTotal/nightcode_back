@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from .models import User, TypeDocument, Roles, Status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
+from authusers.permissions import IsAdminOnly
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -47,7 +51,8 @@ class ChangePasswordSerializer(serializers.Serializer):
             })
         return attrs
 
-    def save(self, user):
+    def save(self, **kwargs):
+        user = kwargs.get('user')
         user.set_password(self.validated_data['password'])
         user.save(update_fields=['password'])
         return user
