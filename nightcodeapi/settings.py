@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urlsplit
 
 from dotenv import load_dotenv
 
@@ -44,6 +44,27 @@ def env_list(name: str, default: list[str] | None = None) -> list[str]:
 def env_str(name: str, default: str = '') -> str:
     value = os.getenv(name)
     return value.strip() if value is not None else default
+
+
+def normalize_origin(value: str) -> str:
+    value = value.strip()
+    if not value:
+        return value
+
+    parts = urlsplit(value)
+    if parts.scheme and parts.netloc:
+        return f'{parts.scheme}://{parts.netloc}'
+
+    return value.rstrip('/')
+
+
+def normalize_origin_list(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for value in values:
+        origin = normalize_origin(value)
+        if origin and origin not in normalized:
+            normalized.append(origin)
+    return normalized
 
 
 def build_database_config() -> dict:
@@ -150,11 +171,13 @@ CORS_ALLOW_ALL_ORIGINS = env_bool('CORS_ALLOW_ALL_ORIGINS', False)
 CORS_ALLOWED_ORIGINS = env_list(
     'CORS_ALLOWED_ORIGINS',
     [
+        "https://nightcodefrontend.vercel.app",
         'http://localhost:3000',
         'http://127.0.0.1:3000',
 
     ],
 )
+CORS_ALLOWED_ORIGINS = normalize_origin_list(CORS_ALLOWED_ORIGINS)
 CSRF_TRUSTED_ORIGINS = env_list(
     'CSRF_TRUSTED_ORIGINS',
     [
@@ -162,12 +185,14 @@ CSRF_TRUSTED_ORIGINS = env_list(
         'http://127.0.0.1:3000',
     ],
 )
+CSRF_TRUSTED_ORIGINS = normalize_origin_list(CSRF_TRUSTED_ORIGINS)
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 
 render_external_url = env_str('RENDER_EXTERNAL_URL')
 if render_external_url:
+    render_external_url = normalize_origin(render_external_url)
     if render_external_url not in CORS_ALLOWED_ORIGINS:
         CORS_ALLOWED_ORIGINS.append(render_external_url)
     if render_external_url not in CSRF_TRUSTED_ORIGINS:
